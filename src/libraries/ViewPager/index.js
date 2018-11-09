@@ -119,6 +119,25 @@ export default class ViewPager extends PureComponent {
     }
 
     componentDidUpdate (prevProps) {
+        if(this.props.initialPage!==this.currentPage){
+            // 解决bug：initialPage属性设置后，组件没有更新列表状态
+            // (即没有触发DidmountHandler中的操作，因此在这里进行debug)
+            this.onPageScrollStateChanged('settling');
+
+            const page = this.validPage(this.props.initialPage);
+            this.onPageChanged(page);
+
+            const finalX = this.getScrollOffsetOfPage(page);
+            this.scroller.startScroll(this.scroller.getCurrX(), 0, finalX - this.scroller.getCurrX(), 0, 0);
+
+            requestAnimationFrame(() => {
+                // this is here to work around a bug in FlatList, as discussed here
+                // https://github.com/facebook/react-native/issues/1831
+                // (and solved here https://github.com/facebook/react-native/commit/03ae65bc ?)
+                this.scrollByOffset(1);
+                this.scrollByOffset(-1);
+            });
+        };
         if (this.layoutChanged) {
             this.layoutChanged = false;
             if (typeof this.currentPage === 'number') {
@@ -220,11 +239,11 @@ export default class ViewPager extends PureComponent {
 
         const finalX = this.getScrollOffsetOfPage(page);
         if (immediate) {
-            InteractionManager.runAfterInteractions(() => {
+            //InteractionManager.runAfterInteractions(() => {
                 this.scroller.startScroll(this.scroller.getCurrX(), 0, finalX - this.scroller.getCurrX(), 0, 0);
                 this.refs['innerFlatList'] && this.refs['innerFlatList'].scrollToOffset({offset: finalX, animated: false});
                 this.refs['innerFlatList'] && this.refs['innerFlatList'].recordInteraction();
-            });
+            //});
         } else {
             this.scroller.startScroll(this.scroller.getCurrX(), 0, finalX - this.scroller.getCurrX(), 0, 400);
         }
@@ -309,7 +328,7 @@ export default class ViewPager extends PureComponent {
         if (!scrollEnabled || pageDataArray.length <= 0) {
             gestureResponder = {};
         }
-
+        debugger;
         return (
             <View
               {...this.props}
